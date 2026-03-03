@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: viajera-digital-backend
+    runtime: docker
+    plan: free
+    region: oregon
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false # Set this in the Render Dashboard
+      - key: ALLOWED_ORIGINS
+        value: https://viajera-digital-alpha.vercel.app,http://localhost:3000
+      - key: MAX_VIDEO_DURATION_MINUTES
+        value: "150"
+      - key: TEMP_DIR
+        value: /tmp/viajera
