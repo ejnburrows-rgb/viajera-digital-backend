@@ -1,11 +1,6 @@
 """
 Viajera Digital — Export Generation (PDF, TXT, JSON)
-Vintage Cuban Literary Pamphlet Style
-
-PDF STYLE: 1950s Cuban literary pamphlet.
-  Colors: Cream background, dark brown text, golden-brown accents.
-  Fonts: Times-Roman, Times-Bold, Times-Italic (built into reportlab).
-  Everything in Spanish.
+Vintage Cuban Literary Style
 """
 
 import os
@@ -27,136 +22,21 @@ from reportlab.platypus import (
     Spacer,
 )
 
-# ── Colors ───────────────────────────────────────────────
-CREAM = Color(245 / 255, 235 / 255, 220 / 255)
-DARK_BROWN = Color(60 / 255, 40 / 255, 20 / 255)
-GOLDEN_BROWN = Color(180 / 255, 130 / 255, 60 / 255)
+from models import ProcessResult
 
-W, H = letter  # 612 x 792 points
+# --- Constants & Colors ---
+CREAM = Color(245/255, 235/255, 220/255)
+DARK_BROWN = Color(60/255, 40/255, 20/255)
+GOLDEN_BROWN = Color(180/255, 130/255, 60/255)
 
-# ── Unicode decorations ─────────────────────────────────
 ORNAMENT = "\u2500\u2500\u2500 \u2726 \u2500\u2500\u2500"
-THICK_ORNAMENT = "\u2550\u2550\u2550\u2550\u2550\u2550\u2550 \u2726 \u2550\u2550\u2550\u2550\u2550\u2550\u2550"
+THICK_ORNAMENT = "\u2550\u2550\u2550\u2550 \u2726 \u2550\u2550\u2550\u2550"
 THIN_LINE = "\u2500" * 35
 
-
-# ═══════════════════════════════════════════════════════════
-# REPORTLAB STYLES
-# ═══════════════════════════════════════════════════════════
-
-def _make_styles():
-    return {
-        "cover_brand": ParagraphStyle(
-            "CoverBrand", fontName="Times-Bold", fontSize=14,
-            textColor=GOLDEN_BROWN, alignment=1, spaceAfter=4, leading=18,
-        ),
-        "cover_title": ParagraphStyle(
-            "CoverTitle", fontName="Times-Bold", fontSize=28,
-            textColor=DARK_BROWN, alignment=1, spaceAfter=6, leading=34,
-        ),
-        "cover_subtitle": ParagraphStyle(
-            "CoverSubtitle", fontName="Times-Italic", fontSize=16,
-            textColor=DARK_BROWN, alignment=1, spaceAfter=6, leading=20,
-        ),
-        "cover_poets": ParagraphStyle(
-            "CoverPoets", fontName="Times-Roman", fontSize=18,
-            textColor=DARK_BROWN, alignment=1, spaceAfter=4, leading=22,
-        ),
-        "cover_stats": ParagraphStyle(
-            "CoverStats", fontName="Times-Roman", fontSize=11,
-            textColor=GOLDEN_BROWN, alignment=1, spaceAfter=4, leading=14,
-        ),
-        "cover_footer": ParagraphStyle(
-            "CoverFooter", fontName="Times-Italic", fontSize=9,
-            textColor=GOLDEN_BROWN, alignment=1, spaceAfter=3, leading=12,
-        ),
-        "ornament": ParagraphStyle(
-            "Ornament", fontName="Times-Roman", fontSize=12,
-            textColor=GOLDEN_BROWN, alignment=1, spaceBefore=10, spaceAfter=10,
-        ),
-        "epigraph": ParagraphStyle(
-            "Epigraph", fontName="Times-Italic", fontSize=13,
-            textColor=DARK_BROWN, alignment=1, leading=18, spaceAfter=12,
-        ),
-        "decima_header": ParagraphStyle(
-            "DecimaHeader", fontName="Times-Bold", fontSize=12,
-            textColor=DARK_BROWN, alignment=0, spaceBefore=8, spaceAfter=4,
-        ),
-        "verse": ParagraphStyle(
-            "Verse", fontName="Times-Roman", fontSize=11,
-            textColor=DARK_BROWN, alignment=0, leading=15,
-            leftIndent=0.5 * inch, spaceAfter=1,
-        ),
-        "separator": ParagraphStyle(
-            "Separator", fontName="Times-Roman", fontSize=9,
-            textColor=GOLDEN_BROWN, alignment=1, spaceBefore=8, spaceAfter=8,
-        ),
-        "thick_separator": ParagraphStyle(
-            "ThickSep", fontName="Times-Roman", fontSize=10,
-            textColor=GOLDEN_BROWN, alignment=1, spaceBefore=12, spaceAfter=12,
-        ),
-        "section_title": ParagraphStyle(
-            "SectionTitle", fontName="Times-Bold", fontSize=16,
-            textColor=DARK_BROWN, alignment=1, spaceBefore=16, spaceAfter=8,
-        ),
-        "body": ParagraphStyle(
-            "Body", fontName="Times-Roman", fontSize=11,
-            textColor=DARK_BROWN, alignment=0, leading=15, spaceAfter=6,
-        ),
-        "highlight_header": ParagraphStyle(
-            "HighlightHeader", fontName="Times-Bold", fontSize=12,
-            textColor=GOLDEN_BROWN, alignment=0, spaceBefore=10, spaceAfter=4,
-        ),
-        "analysis": ParagraphStyle(
-            "Analysis", fontName="Times-Italic", fontSize=10,
-            textColor=DARK_BROWN, alignment=0, leading=13,
-            leftIndent=0.3 * inch, spaceBefore=4, spaceAfter=8,
-        ),
-        "colophon": ParagraphStyle(
-            "Colophon", fontName="Times-Italic", fontSize=10,
-            textColor=GOLDEN_BROWN, alignment=1, leading=14, spaceAfter=4,
-        ),
-    }
+W, H = letter
 
 
-# ═══════════════════════════════════════════════════════════
-# PAGE CALLBACKS
-# ═══════════════════════════════════════════════════════════
-
-def _draw_cream_bg(canvas, doc):
-    canvas.saveState()
-    canvas.setFillColor(CREAM)
-    canvas.rect(0, 0, W, H, fill=True, stroke=False)
-    canvas.restoreState()
-
-
-def _draw_cover(canvas, doc):
-    _draw_cream_bg(canvas, doc)
-
-
-def _draw_epigraph(canvas, doc):
-    _draw_cream_bg(canvas, doc)
-
-
-class _InteriorCallback:
-    def __init__(self, poet_a, poet_b):
-        self.header_text = f"Viajera Digital \u2014 {poet_a} vs. {poet_b}"
-
-    def __call__(self, canvas, doc):
-        _draw_cream_bg(canvas, doc)
-        canvas.saveState()
-        canvas.setFont("Times-Italic", 8)
-        canvas.setFillColor(GOLDEN_BROWN)
-        canvas.drawRightString(W - 72, H - 40, self.header_text)
-        canvas.setFont("Times-Roman", 9)
-        canvas.setFillColor(GOLDEN_BROWN)
-        canvas.drawCentredString(W / 2, 35, f"\u2014 {doc.page} \u2014")
-        canvas.restoreState()
-
-
-# ═══════════════════════════════════════════════════════════
-# HELPERS
-# ═══════════════════════════════════════════════════════════
+# --- Styles ---
 
 def _esc(text):
     """Escape XML special characters for reportlab Paragraphs."""
@@ -165,295 +45,239 @@ def _esc(text):
     return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-def _get_poet_names(data):
-    poets = data.get("poets", [])
-    poet_a = poets[0]["name"] if len(poets) > 0 else "Poeta A"
-    poet_b = poets[1]["name"] if len(poets) > 1 else "Poeta B"
-    return poet_a, poet_b
+def get_vintage_styles():
+    styles = {}
+    styles["brand"] = ParagraphStyle(
+        "Brand", fontName="Times-Bold", fontSize=14,
+        textColor=GOLDEN_BROWN, alignment=1,
+    )
+    styles["cover_title"] = ParagraphStyle(
+        "CoverTitle", fontName="Times-Bold", fontSize=28,
+        textColor=DARK_BROWN, alignment=1, spaceBefore=20, spaceAfter=20,
+    )
+    styles["cover_subtitle"] = ParagraphStyle(
+        "CoverSubtitle", fontName="Times-Italic", fontSize=16,
+        textColor=DARK_BROWN, alignment=1, spaceAfter=20,
+    )
+    styles["cover_poets"] = ParagraphStyle(
+        "CoverPoets", fontName="Times-Roman", fontSize=18,
+        textColor=DARK_BROWN, alignment=1, spaceAfter=5,
+    )
+    styles["cover_stats"] = ParagraphStyle(
+        "CoverStats", fontName="Times-Roman", fontSize=11,
+        textColor=GOLDEN_BROWN, alignment=1, spaceBefore=10,
+    )
+    styles["cover_footer"] = ParagraphStyle(
+        "CoverFooter", fontName="Times-Italic", fontSize=9,
+        textColor=GOLDEN_BROWN, alignment=1, leading=12,
+    )
+    styles["ornament"] = ParagraphStyle(
+        "Ornament", fontName="Times-Roman", fontSize=12,
+        textColor=GOLDEN_BROWN, alignment=1, spaceBefore=4, spaceAfter=4,
+    )
+    styles["epigraph"] = ParagraphStyle(
+        "Epigraph", fontName="Times-Italic", fontSize=13,
+        textColor=DARK_BROWN, alignment=1, leading=18,
+    )
+    styles["decima_header"] = ParagraphStyle(
+        "DecimaHeader", fontName="Times-Bold", fontSize=12,
+        textColor=DARK_BROWN, alignment=0, spaceBefore=10,
+    )
+    styles["verse"] = ParagraphStyle(
+        "Verse", fontName="Times-Roman", fontSize=11,
+        textColor=DARK_BROWN, alignment=0, leading=15, leftIndent=0.5*inch,
+    )
+    styles["separator"] = ParagraphStyle(
+        "Separator", fontName="Times-Roman", fontSize=8,
+        textColor=GOLDEN_BROWN, alignment=1, spaceBefore=6, spaceAfter=6,
+    )
+    styles["section_title"] = ParagraphStyle(
+        "SectionTitle", fontName="Times-Bold", fontSize=16,
+        textColor=DARK_BROWN, alignment=1, spaceBefore=20, spaceAfter=10,
+    )
+    styles["body"] = ParagraphStyle(
+        "Body", fontName="Times-Roman", fontSize=11,
+        textColor=DARK_BROWN, spaceAfter=6,
+    )
+    styles["analysis"] = ParagraphStyle(
+        "Analysis", fontName="Times-Italic", fontSize=10,
+        textColor=DARK_BROWN, leftIndent=0.2*inch, spaceBefore=4,
+    )
+    styles["colophon"] = ParagraphStyle(
+        "Colophon", fontName="Times-Italic", fontSize=10,
+        textColor=GOLDEN_BROWN, alignment=1, leading=14,
+    )
+    return styles
 
 
-# ═══════════════════════════════════════════════════════════
-# PDF GENERATION
-# ═══════════════════════════════════════════════════════════
+# --- Background Drawing ---
 
-def generate_pdf(data, output_dir):
+def draw_vintage_bg(canvas, doc):
+    canvas.saveState()
+    canvas.setFillColor(CREAM)
+    canvas.rect(0, 0, W, H, fill=True, stroke=False)
+
+    # Generic interior footer
+    if doc.pageTemplate.id == "interior":
+        canvas.setFont("Times-Roman", 9)
+        canvas.setFillColor(GOLDEN_BROWN)
+        canvas.drawCentredString(W/2, 35, f"\u2014 {doc.page} \u2014")
+    canvas.restoreState()
+
+
+# --- PDF Generation ---
+
+def generate_pdf(job_id: str, data: ProcessResult, output_dir: str):
     os.makedirs(output_dir, exist_ok=True)
     pdf_path = os.path.join(output_dir, "viajera_archivo.pdf")
-    styles = _make_styles()
+    styles = get_vintage_styles()
 
-    poet_a, poet_b = _get_poet_names(data)
-    interior_cb = _InteriorCallback(poet_a, poet_b)
+    interior_frame = Frame(1.2*inch, 1*inch, W-2.4*inch, H-2*inch, id="interior_frame")
 
-    cover_frame = Frame(1.5 * inch, 1 * inch, W - 3 * inch, H - 2 * inch, id="cover")
-    epigraph_frame = Frame(1.5 * inch, 2.5 * inch, W - 3 * inch, H - 5 * inch, id="epigraph")
-    interior_frame = Frame(1.2 * inch, 1 * inch, W - 2.4 * inch, H - 2 * inch, id="interior")
+    doc = BaseDocTemplate(pdf_path, pagesize=letter)
+    doc.addPageTemplates([
+        PageTemplate(id="cover", frames=[interior_frame], onPage=draw_vintage_bg),
+        PageTemplate(id="interior", frames=[interior_frame], onPage=draw_vintage_bg),
+    ])
 
-    templates = [
-        PageTemplate(id="cover", frames=[cover_frame], onPage=_draw_cover),
-        PageTemplate(id="epigraph", frames=[epigraph_frame], onPage=_draw_epigraph),
-        PageTemplate(id="interior", frames=[interior_frame], onPage=interior_cb),
-    ]
-
-    doc = BaseDocTemplate(pdf_path, pagesize=letter, pageTemplates=templates)
     elements = []
 
-    # ── COVER PAGE ───────────────────────────────────────
-    elements.append(Spacer(1, 1.2 * inch))
+    # --- COVER ---
+    elements.append(Spacer(1, 1*inch))
     elements.append(Paragraph(ORNAMENT, styles["ornament"]))
-    elements.append(Paragraph("VIAJERA DIGITAL", styles["cover_brand"]))
+    elements.append(Paragraph("VIAJERA DIGITAL", styles["brand"]))
     elements.append(Paragraph(ORNAMENT, styles["ornament"]))
-    elements.append(Spacer(1, 0.3 * inch))
+    elements.append(Spacer(1, 0.4*inch))
     elements.append(Paragraph("CANTUR\u00cdA", styles["cover_title"]))
 
-    subtitle = f"Controversia entre {poet_a} y {poet_b}"
-    elements.append(Paragraph(_esc(subtitle), styles["cover_subtitle"]))
+    event_title = f"Controversia entre {_esc(data.poets[0].name)} y {_esc(data.poets[1].name)}"
+    elements.append(Paragraph(event_title, styles["cover_subtitle"]))
 
     elements.append(Paragraph(ORNAMENT, styles["ornament"]))
-    elements.append(Spacer(1, 0.2 * inch))
-    elements.append(Paragraph(_esc(poet_a), styles["cover_poets"]))
+    elements.append(Spacer(1, 0.2*inch))
+    elements.append(Paragraph(_esc(data.poets[0].name), styles["cover_poets"]))
     elements.append(Paragraph("vs.", styles["cover_stats"]))
-    elements.append(Paragraph(_esc(poet_b), styles["cover_poets"]))
+    elements.append(Paragraph(_esc(data.poets[1].name), styles["cover_poets"]))
     elements.append(Paragraph(ORNAMENT, styles["ornament"]))
 
-    dur = data.get("duration_minutes", "\u2014")
-    total = data.get("total_decimas", 0)
     elements.append(Paragraph(
-        f"{total} d\u00e9cimas \u00b7 {dur} minutos",
+        f"{data.total_decimas} d\u00e9cimas \u00b7 {data.duration_minutes} minutos",
         styles["cover_stats"],
     ))
 
-    elements.append(Spacer(1, 0.8 * inch))
+    elements.append(Spacer(1, 1*inch))
     elements.append(Paragraph("Transcripci\u00f3n y an\u00e1lisis automatizado", styles["cover_footer"]))
     elements.append(Paragraph("Viajera Digital \u00b7 viajera-digital-alpha.vercel.app", styles["cover_footer"]))
     elements.append(Paragraph("En honor a Calixto Gonz\u00e1lez, El Guajiro de Hialeah", styles["cover_footer"]))
 
-    # ── EPIGRAPH PAGE ────────────────────────────────────
-    elements.append(NextPageTemplate("epigraph"))
     elements.append(PageBreak())
-    elements.append(Spacer(1, 1 * inch))
+    elements.append(NextPageTemplate("interior"))
+
+    # --- EPIGRAPH ---
+    elements.append(Spacer(1, 2*inch))
     elements.append(Paragraph(
         "\u201cLa d\u00e9cima es el alma del pueblo cubano,<br/>"
         "diez versos que caben en la palma de la mano.\u201d",
         styles["epigraph"],
     ))
     elements.append(Paragraph(ORNAMENT, styles["ornament"]))
-
-    # ── DECIMA PAGES ─────────────────────────────────────
-    elements.append(NextPageTemplate("interior"))
     elements.append(PageBreak())
 
-    decimas = data.get("decimas", [])
-    prev_poet = None
-
-    for decima in decimas:
-        poet_id = decima.get("poet_id", "")
-        poet_name = decima.get("poet_name", "")
-        number = decima.get("number", 0)
-        lines = decima.get("lines", [])
-
-        if prev_poet is not None and poet_id != prev_poet:
-            elements.append(Paragraph(THICK_ORNAMENT, styles["thick_separator"]))
-        elif prev_poet is not None:
-            elements.append(Paragraph(THIN_LINE, styles["separator"]))
-
-        gb_hex = GOLDEN_BROWN.hexval()[2:]
-        num_str = f'<font color="#{gb_hex}">{number}.</font>'
-        elements.append(Paragraph(f"{num_str} {_esc(poet_name)}", styles["decima_header"]))
+    # --- DÉCIMAS ---
+    for d in data.decimas:
+        elements.append(Paragraph(f"{d.number}. {_esc(d.poet_name)}", styles["decima_header"]))
         elements.append(Spacer(1, 4))
-
-        for line in lines:
+        for line in d.lines:
             elements.append(Paragraph(_esc(line), styles["verse"]))
+        elements.append(Paragraph(THIN_LINE, styles["separator"]))
+        elements.append(Spacer(1, 10))
 
-        elements.append(Spacer(1, 12))
-        prev_poet = poet_id
-
-    # ── RESUMEN FINAL + TOP 4 ────────────────────────────
     elements.append(PageBreak())
-    elements.append(Paragraph(ORNAMENT, styles["ornament"]))
+
+    # --- SUMMARY ---
+    elements.append(Paragraph(THICK_ORNAMENT, styles["ornament"]))
     elements.append(Paragraph("RESUMEN FINAL", styles["section_title"]))
-    elements.append(Paragraph(ORNAMENT, styles["ornament"]))
-    elements.append(Spacer(1, 8))
+    elements.append(Paragraph(THICK_ORNAMENT, styles["ornament"]))
 
-    poets = data.get("poets", [])
-    poet_a_count = poets[0].get("decima_count", 0) if len(poets) > 0 else 0
-    poet_b_count = poets[1].get("decima_count", 0) if len(poets) > 1 else 0
+    elements.append(Paragraph(f"<b>Total de d\u00e9cimas:</b> {data.total_decimas}", styles["body"]))
+    elements.append(Paragraph(f"<b>Duraci\u00f3n:</b> {data.duration_minutes} min", styles["body"]))
+    elements.append(Paragraph(f"<b>Narrativa:</b> {_esc(data.event_summary)}", styles["body"]))
+    if data.technical_winner:
+        elements.append(Paragraph(f"<b>Ganador T\u00e9cnico:</b> {_esc(data.technical_winner)}", styles["body"]))
 
-    stats = [
-        f"<b>Total de d\u00e9cimas:</b> {total}",
-        f"<b>Duraci\u00f3n del evento:</b> {dur} minutos",
-        f"<b>Poetas:</b> {_esc(poet_a)} ({poet_a_count}) vs. {_esc(poet_b)} ({poet_b_count})",
-    ]
-    summary = data.get("event_summary", "")
-    winner = data.get("technical_winner", "")
-    if summary:
-        stats.append(f"<b>Tema principal:</b> {_esc(summary)}")
-    if winner:
-        stats.append(f"<b>Ganador t\u00e9cnico:</b> {_esc(winner)}")
+    elements.append(Spacer(1, 20))
+    elements.append(Paragraph(THICK_ORNAMENT, styles["ornament"]))
+    elements.append(Paragraph("TOP 4 DESTACADAS", styles["section_title"]))
+    elements.append(Paragraph(THICK_ORNAMENT, styles["ornament"]))
 
-    for s in stats:
-        elements.append(Paragraph(s, styles["body"]))
-
-    elements.append(Spacer(1, 16))
-    elements.append(Paragraph(ORNAMENT, styles["ornament"]))
-    elements.append(Paragraph("TOP 4 D\u00c9CIMAS DESTACADAS", styles["section_title"]))
-    elements.append(Paragraph(ORNAMENT, styles["ornament"]))
-
-    top_4 = data.get("top_4", [])
-    for entry in top_4:
-        rank = entry.get("rank", 0)
-        e_poet = entry.get("poet_name", "")
-        e_num = entry.get("decima_number", 0)
-        e_lines = entry.get("lines", [])
-        e_analysis = entry.get("analysis", "")
-
-        elements.append(Paragraph(THIN_LINE, styles["separator"]))
-        elements.append(Paragraph(f"DESTACADA #{rank}", styles["highlight_header"]))
+    for t in data.top_4:
         elements.append(Paragraph(
-            f"Poeta: {_esc(e_poet)} \u00b7 D\u00e9cima Original: #{e_num}",
-            styles["highlight_header"],
+            f"DESTACADA - {_esc(t.poet_name)} (D\u00e9cima #{t.decima_number})",
+            styles["decima_header"],
         ))
-        elements.append(Paragraph(THIN_LINE, styles["separator"]))
-
-        for line in e_lines:
+        for line in t.lines:
             elements.append(Paragraph(_esc(line), styles["verse"]))
+        elements.append(Paragraph(f"AN\u00c1LISIS: {_esc(t.analysis)}", styles["analysis"]))
+        elements.append(Paragraph(THIN_LINE, styles["separator"]))
 
-        elements.append(Spacer(1, 6))
-        elements.append(Paragraph(
-            f"<b>AN\u00c1LISIS:</b><br/>{_esc(e_analysis)}",
-            styles["analysis"],
-        ))
-
-    # ── COLOPHON ─────────────────────────────────────────
+    # --- COLOPHON ---
     elements.append(PageBreak())
-    elements.append(Spacer(1, 2.5 * inch))
-    elements.append(Paragraph(ORNAMENT, styles["colophon"]))
-    elements.append(Spacer(1, 12))
-    elements.append(Paragraph("Este archivo fue generado por Viajera Digital", styles["colophon"]))
-    elements.append(Paragraph("Preservando el repentismo cubano, una d\u00e9cima a la vez.", styles["colophon"]))
-    elements.append(Paragraph("viajera-digital-alpha.vercel.app", styles["colophon"]))
+    elements.append(Spacer(1, 3*inch))
+    elements.append(Paragraph(ORNAMENT, styles["ornament"]))
+    elements.append(Paragraph("Generado por Viajera Digital", styles["colophon"]))
+    elements.append(Paragraph("Preservando el repentismo cubano", styles["colophon"]))
     elements.append(Paragraph("\u00a9 Emilio Jos\u00e9 Novo", styles["colophon"]))
-    elements.append(Spacer(1, 12))
-    elements.append(Paragraph(ORNAMENT, styles["colophon"]))
+    elements.append(Paragraph(ORNAMENT, styles["ornament"]))
 
     doc.build(elements)
     return pdf_path
 
 
-# ═══════════════════════════════════════════════════════════
-# TXT GENERATION
-# ═══════════════════════════════════════════════════════════
+# --- TXT Generation ---
 
-def generate_txt(data, output_dir):
+def generate_txt(job_id: str, data: ProcessResult, output_dir: str):
     os.makedirs(output_dir, exist_ok=True)
     txt_path = os.path.join(output_dir, "viajera_archivo.txt")
+    with open(txt_path, "w", encoding="utf-8") as f:
+        f.write("VIAJERA DIGITAL - ARCHIVO DE REPENTISMO\n")
+        f.write("=" * 40 + "\n\n")
+        f.write(f"Resumen: {data.event_summary}\n\n")
 
-    poet_a, poet_b = _get_poet_names(data)
-    total = data.get("total_decimas", 0)
-    dur = data.get("duration_minutes", "\u2014")
+        for d in data.decimas:
+            f.write(f"{d.number}. {d.poet_name}\n")
+            for line in d.lines:
+                f.write(f"    {line}\n")
+            f.write("-" * 20 + "\n")
 
-    lines = []
-    lines.append("VIAJERA DIGITAL")
-    lines.append("Archivo de Repentismo Cubano")
-    lines.append("=" * 50)
-    lines.append("")
-    lines.append(f"Poetas: {poet_a} vs. {poet_b}")
-    lines.append(f"Total de decimas: {total}")
-    lines.append(f"Duracion: {dur} minutos")
-    lines.append("")
-
-    summary = data.get("event_summary", "")
-    if summary:
-        lines.append(summary)
-        lines.append("")
-
-    lines.append("=" * 50)
-    lines.append("")
-
-    prev_poet = None
-    for decima in data.get("decimas", []):
-        pid = decima.get("poet_id", "")
-        if prev_poet is not None and pid != prev_poet:
-            lines.append("\u2550\u2550\u2550\u2550\u2550\u2550\u2550 \u2726 \u2550\u2550\u2550\u2550\u2550\u2550\u2550")
-            lines.append("")
-        elif prev_poet is not None:
-            lines.append("\u2500" * 35)
-            lines.append("")
-
-        lines.append(f"{decima.get('number', 0)}. {decima.get('poet_name', '')}")
-        lines.append("")
-        for verse in decima.get("lines", []):
-            lines.append(f"    {verse}")
-        lines.append("")
-        prev_poet = pid
-
-    lines.append("=" * 50)
-    lines.append("RESUMEN FINAL")
-    lines.append("=" * 50)
-    lines.append("")
-    lines.append(f"Total de decimas: {total}")
-    lines.append(f"Duracion: {dur} minutos")
-
-    poets = data.get("poets", [])
-    pa_c = poets[0].get("decima_count", 0) if len(poets) > 0 else 0
-    pb_c = poets[1].get("decima_count", 0) if len(poets) > 1 else 0
-    lines.append(f"Poetas: {poet_a} ({pa_c}) vs. {poet_b} ({pb_c})")
-
-    if summary:
-        lines.append(f"Tema: {summary}")
-    winner = data.get("technical_winner", "")
-    if winner:
-        lines.append(f"Ganador tecnico: {winner}")
-    lines.append("")
-
-    lines.append("TOP 4 DECIMAS DESTACADAS")
-    lines.append("\u2500" * 35)
-    lines.append("")
-
-    for entry in data.get("top_4", []):
-        lines.append(f"Destacada #{entry.get('rank', 0)} \u2014 {entry.get('poet_name', '')} (Decima #{entry.get('decima_number', 0)})")
-        lines.append("")
-        for verse in entry.get("lines", []):
-            lines.append(f"    {verse}")
-        lines.append("")
-        lines.append(f"Analisis: {entry.get('analysis', '')}")
-        lines.append("")
-        lines.append("\u2500" * 35)
-        lines.append("")
-
-    lines.append("\u2500\u2500\u2500 \u2726 \u2500\u2500\u2500")
-    lines.append("Generado por Viajera Digital")
-    lines.append("viajera-digital-alpha.vercel.app")
-    lines.append("\u00a9 Emilio Jose Novo")
-
-    content = "\n".join(lines)
-    Path(txt_path).write_text(content, encoding="utf-8")
+        f.write("\nTOP 4 DESTACADAS\n")
+        f.write("=" * 40 + "\n")
+        for t in data.top_4:
+            f.write(f"D\u00e9cima #{t.decima_number} - {t.poet_name}\n")
+            for line in t.lines:
+                f.write(f"    {line}\n")
+            f.write(f"An\u00e1lisis: {t.analysis}\n")
+            f.write("-" * 20 + "\n")
     return txt_path
 
 
-# ═══════════════════════════════════════════════════════════
-# JSON GENERATION
-# ═══════════════════════════════════════════════════════════
+# --- JSON Generation ---
 
-def generate_json(data, output_dir):
+def generate_json(job_id: str, data: ProcessResult, output_dir: str):
     os.makedirs(output_dir, exist_ok=True)
     json_path = os.path.join(output_dir, "viajera_archivo.json")
-    Path(json_path).write_text(
-        json.dumps(data, indent=2, ensure_ascii=False),
-        encoding="utf-8",
-    )
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(data.model_dump(), f, indent=2, ensure_ascii=False)
     return json_path
 
 
-# ═══════════════════════════════════════════════════════════
-# PUBLIC API — called by pipeline.py
-# ═══════════════════════════════════════════════════════════
+# --- Public API (called by pipeline.py) ---
 
-def generate_all_exports(result, export_dir):
+def generate_all_exports(job_id: str, result: ProcessResult, export_dir: str):
     """Generate PDF, TXT, JSON exports. Returns dict of paths."""
     os.makedirs(export_dir, exist_ok=True)
-    pdf_path = generate_pdf(result, export_dir)
-    txt_path = generate_txt(result, export_dir)
-    json_path = generate_json(result, export_dir)
+    pdf_path = generate_pdf(job_id, result, export_dir)
+    txt_path = generate_txt(job_id, result, export_dir)
+    json_path = generate_json(job_id, result, export_dir)
     return {
         "pdf": pdf_path,
         "txt": txt_path,

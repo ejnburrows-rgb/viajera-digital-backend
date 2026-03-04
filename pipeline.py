@@ -291,31 +291,57 @@ def run_pipeline(job_id, youtube_url, poet_a_name, poet_b_name, progress_cb=None
     poet_a_count = sum(1 for d in decimas if d.get("poet_id") == "poet_a")
     poet_b_count = len(decimas) - poet_a_count
 
-    result = {
-        "status": "complete",
-        "event_title": "Canturia",
-        "event_detail": "",
-        "event_summary": structured.get("event_summary", ""),
-        "technical_winner": structured.get("technical_winner", ""),
-        "total_decimas": len(decimas),
-        "duration_minutes": duration_minutes,
-        "poets": [
-            {"id": "poet_a", "name": poet_a_name, "decima_count": poet_a_count},
-            {"id": "poet_b", "name": poet_b_name, "decima_count": poet_b_count},
+    # Build Pydantic ProcessResult for structured export generation
+    from models import ProcessResult, Decima, Top4Entry, PoetInfo, Downloads
+
+    pydantic_decimas = []
+    for d in decimas:
+        pydantic_decimas.append(Decima(
+            number=d.get("number", 0),
+            poet_id=d.get("poet_id", ""),
+            poet_name=d.get("poet_name", ""),
+            type=d.get("type", "controversia"),
+            lines=d.get("lines", []),
+        ))
+
+    pydantic_top4 = []
+    for t in top_4:
+        pydantic_top4.append(Top4Entry(
+            rank=t.get("rank", 1),
+            decima_number=t.get("decima_number", 0),
+            poet_id=t.get("poet_id", ""),
+            poet_name=t.get("poet_name", ""),
+            lines=t.get("lines", []),
+            analysis=t.get("analysis", ""),
+        ))
+
+    process_result = ProcessResult(
+        status="complete",
+        event_summary=structured.get("event_summary", ""),
+        technical_winner=structured.get("technical_winner", ""),
+        total_decimas=len(decimas),
+        duration_minutes=duration_minutes,
+        poets=[
+            PoetInfo(id="poet_a", name=poet_a_name, decima_count=poet_a_count),
+            PoetInfo(id="poet_b", name=poet_b_name, decima_count=poet_b_count),
         ],
-        "decimas": decimas,
-        "top_4": top_4,
-    }
+        decimas=pydantic_decimas,
+        top_4=pydantic_top4,
+    )
 
     export_dir = os.path.join(TEMP_DIR, job_id, "exports")
-    paths = generate_all_exports(result, export_dir)
+    paths = generate_all_exports(job_id, process_result, export_dir)
 
-    result["downloads"] = {
-        "pdf_url": f"/downloads/{job_id}/pdf",
-        "txt_url": f"/downloads/{job_id}/txt",
-        "json_url": f"/downloads/{job_id}/json",
-    }
+    process_result.downloads = Downloads(
+        pdf_url=f"/downloads/{job_id}/pdf",
+        txt_url=f"/downloads/{job_id}/txt",
+        json_url=f"/downloads/{job_id}/json",
+    )
+
+    # Return as dict for JSON serialization in main.py
+    result = process_result.model_dump()
     result["_export_paths"] = paths
 
     update_progress(progress_cb, "complete", 100, "Completado!")
     return result
+
