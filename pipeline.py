@@ -100,7 +100,7 @@ def download_audio(youtube_url, job_id, progress_cb=None):
     try:
         subprocess.run(
             ["yt-dlp", "--extract-audio", "--audio-format", "wav",
-             "--postprocessor-args", "-ar 16000 -ac 1",
+             "--postprocessor-args", "ffmpeg:-ar 16000 -ac 1",
              "--output", os.path.join(job_dir, "audio.%(ext)s"),
              "--no-playlist", "--quiet", youtube_url],
             capture_output=True, text=True, timeout=300, check=True
